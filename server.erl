@@ -91,7 +91,7 @@ handle_channel(State, {message_send, Msg, Nick}) ->
         Reply =:= true ->
             lists:foreach(fun(Elem) ->
                 spawn(fun() -> genserver:request(Elem, {message_receive, State#channel_st.name, Nick, Msg}) end) end,
-                lists:delete(Nick, State#channel_st.users)),
+                lists:delete(list_to_atom(Nick), State#channel_st.users)),
             io:fwrite("~p~n", ["Messages sent"]),
             {reply, ok, State};
         true -> {reply, user_not_joined, State}
