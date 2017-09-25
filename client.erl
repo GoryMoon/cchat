@@ -24,16 +24,10 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 handle(St, {join, Channel}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    Reply = lists:keyfind(Channel, 1, St#client_st.channels),
-    io:fwrite("~p~n", [Reply]),
-    if
-        Reply =/= false -> {reply, user_already_joined, St};
-        true -> case genserver:request(St#client_st.server, {join, Channel, St#client_st.nick}) of
-                    {ok, Atom} -> St#client_st.channels ++ [{Channel, Atom}], {reply, ok, St} ;
-                    user_already_joined -> {reply, user_already_joined, St}
-                end
-    end,
-    {reply, ok, St} ;
+    case genserver:request(St#client_st.server, {join, Channel, St#client_st.nick}) of
+        ok -> {reply, ok, St} ;
+        user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
+    end;
     % {reply, {error, not_implemented, "join not implemented"}, St} ;
 
 % Leave channel
@@ -42,16 +36,15 @@ handle(St, {leave, Channel}) ->
     % {reply, ok, St} ;
     case genserver:request(St#client_st.server, {leave, Channel, St#client_st.nick}) of
         ok -> {reply, ok, St} ;
-        user_not_joined -> {reply, user_no_joined, St}
-    end,
-    {reply, ok, St} ;
+        user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
+    end;
     % {reply, {error, not_implemented, "leave not implemented"}, St} ;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    case genserver:request(St#client_st.server, {message_send, Channel, Msg, St#client_st.nick}) of
+    case genserver:request(list_to_atom(Channel), {message_send, Msg, St#client_st.nick}) of
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, user_not_joined, St}
     end,
