@@ -15,8 +15,6 @@
     users
 }).
 
-% Return an initial state record. This is called from GUI.
-% Do not change the signature of this function.
 initial_state(ServerAtom) ->
     #server_st{
         server = ServerAtom,
@@ -40,72 +38,61 @@ start(ServerAtom) ->
     PID = genserver:start(ServerAtom, initial_state(ServerAtom), fun handle/2),
     PID.
 
-handle(State, {join, Channel, Nick}) ->
+handle(State, {join, Channel, Client}) ->
     {NewState, Atom} = getChannel(State, Channel),
-    case genserver:request(Atom, {join, Nick}) of
+    case genserver:request(Atom, {join, Client}) of
         ok -> {reply, ok, NewState};
         user_already_joined -> {reply, user_already_joined, NewState}
     end;
 
 % Catch-all for any unhandled requests
-handle(State, Req) ->
+handle(State, _Req) ->
     {reply, {error, not_implemented, "Server does not handle this command"}, State} .
 
 getChannel(State, Channel) ->
-    case lists:keyfind(Channel, 1, State#server_st.channels) of
+    Atom = list_to_atom(Channel),
+    case lists:member(Atom, State#server_st.channels) of
         false ->
-            Atom = list_to_atom(Channel),
             genserver:start(Atom, initial_channel(Channel, Atom), fun handle_channel/2),
-            NewState = State#server_st{channels = State#server_st.channels ++ [{Channel, Atom}]},
+            NewState = State#server_st{channels = State#server_st.channels ++ [Atom]},
             {NewState, Atom};
-        {Name, Atom} -> {State, Atom}
+        true -> {State, Atom}
     end.
 
 % Stop the server process registered to the given name,
 % together with any other associated processes
 stop(ServerAtom) ->
-    % TODO Implement function
-    % Return ok
     genserver:stop(ServerAtom),
     ok.
 
 
-handle_channel(State, {join, Nick}) ->
-    Reply = lists:member(list_to_atom(Nick), State#channel_st.users),
-    io:fwrite("~p~n", [Reply]),
+handle_channel(State, {join, Client}) ->
+    Reply = lists:member(Client, State#channel_st.users),
     if
         Reply =:= true -> {reply, user_already_joined, State};
-        true -> NewState = State#channel_st{users = State#channel_st.users ++ [list_to_atom(Nick)]},
-                io:fwrite("~p~n", [NewState#channel_st.users]),
-                {reply, ok, NewState}
+        true -> NewState = State#channel_st{users = State#channel_st.users ++ [Client]},
+            {reply, ok, NewState}
     end;
 
-handle_channel(State, {leave, Nick}) ->
-    Reply = lists:member(list_to_atom(Nick), State#channel_st.users),
-    io:fwrite("~p~n", [Reply]),
-
+handle_channel(State, {leave, Client}) ->
+    Reply = lists:member(Client, State#channel_st.users),
     if
-        Reply =/= true ->
-            {reply, user_not_joined, State};
-        true -> NewState = State#channel_st{users = State#channel_st.users -- [list_to_atom(Nick)]},
-            io:fwrite("~p~n", [NewState#channel_st.users]),
+        Reply =/= true -> {reply, user_not_joined, State};
+        true -> NewState = State#channel_st{users = State#channel_st.users -- [Client]},
             {reply, ok, NewState}
     end;
 
 
-handle_channel(State, {message_send, Msg, Nick}) ->
-    Reply = lists:member(list_to_atom(Nick), State#channel_st.users),
-    io:fwrite("~p~n", [Reply]),
-    io:fwrite("~p~n", [State]),
+handle_channel(State, {message_send, Msg, Client, Nick}) ->
+    Reply = lists:member(Client, State#channel_st.users),
     if
         Reply =:= true ->
             lists:foreach(fun(Elem) ->
-                spawn(fun() -> genserver:request(Elem, {message_receive, State#channel_st.name, Nick, Msg}) end) end,
-                lists:delete(list_to_atom(Nick), State#channel_st.users)),
-            io:fwrite("~p~n", ["Messages sent"]),
+                genserver:request(Elem, {message_receive, State#channel_st.name, Nick, Msg}) end,
+                lists:delete(Client, State#channel_st.users)),
             {reply, ok, State};
         true -> {reply, user_not_joined, State}
     end;
 
-handle_channel(State, Req) ->
+handle_channel(State, _Req) ->
     {reply, {error, not_implemented, "Channel does not handle this command"}, State} .
