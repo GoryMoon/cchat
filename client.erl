@@ -33,7 +33,7 @@ handle(St, {join, Channel}) ->
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    case genserver:request(St#client_st.server, {leave, Channel, St#client_st.nick}) of
+    case genserver:request(list_to_atom(Channel), {leave, St#client_st.nick}) of
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
     end;

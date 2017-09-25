@@ -81,7 +81,17 @@ handle_channel(State, {join, Nick}) ->
     end;
 
 handle_channel(State, {leave, Nick}) ->
-    erlang:error(not_implemented);
+    Reply = lists:member(list_to_atom(Nick), State#channel_st.users),
+    io:fwrite("~p~n", [Reply]),
+
+    if
+        Reply =/= true ->
+            {reply, user_not_joined, State};
+        true -> NewState = State#channel_st{users = State#channel_st.users -- [list_to_atom(Nick)]},
+            io:fwrite("~p~n", [NewState#channel_st.users]),
+            {reply, ok, NewState}
+    end;
+
 
 handle_channel(State, {message_send, Msg, Nick}) ->
     Reply = lists:member(list_to_atom(Nick), State#channel_st.users),
