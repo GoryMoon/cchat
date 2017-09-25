@@ -1,13 +1,6 @@
 -module(client).
+-include("client.hrl").
 -export([handle/2, initial_state/3]).
-
-% This record defines the structure of the state of a client.
-% Add whatever other fields you need.
--record(client_st, {
-    gui, % atom of the GUI process
-    nick, % nick/username of the client
-    server % atom of the chat server
-}).
 
 % Return an initial state record. This is called from GUI.
 % Do not change the signature of this function.
@@ -15,7 +8,8 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
     #client_st{
         gui = GUIAtom,
         nick = Nick,
-        server = ServerAtom
+        server = ServerAtom,
+        channels = []
     }.
 
 % handle/2 handles each kind of request from GUI
@@ -30,9 +24,14 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 handle(St, {join, Channel}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    case genserver:request(St#client_st.server, {join, Channel, St}) of
-        ok -> {reply, ok, St} ;
-        user_already_joined -> {reply, user_already_joined, St}
+    Reply = lists:keyfind(Channel, 1, St#client_st.channels),
+    io:fwrite("~p~n", [Reply]),
+    if
+        Reply =/= false -> {reply, user_already_joined, St};
+        true -> case genserver:request(St#client_st.server, {join, Channel, St#client_st.nick}) of
+                    {ok, Atom} -> St#client_st.channels ++ [{Channel, Atom}], {reply, ok, St} ;
+                    user_already_joined -> {reply, user_already_joined, St}
+                end
     end,
     {reply, ok, St} ;
     % {reply, {error, not_implemented, "join not implemented"}, St} ;
@@ -41,7 +40,7 @@ handle(St, {join, Channel}) ->
 handle(St, {leave, Channel}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    case genserver:request(St#client_st.server, {leave, Channel, St}) of
+    case genserver:request(St#client_st.server, {leave, Channel, St#client_st.nick}) of
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, user_no_joined, St}
     end,
@@ -52,7 +51,7 @@ handle(St, {leave, Channel}) ->
 handle(St, {message_send, Channel, Msg}) ->
     % TODO: Implement this function
     % {reply, ok, St} ;
-    case genserver:request(St#client_st.server, {message_send, Channel, Msg, St}) of
+    case genserver:request(St#client_st.server, {message_send, Channel, Msg, St#client_st.nick}) of
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, user_not_joined, St}
     end,
