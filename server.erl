@@ -98,4 +98,4 @@ handle_channel(State, {message_send, Msg, Nick}) ->
     end;
 
 handle_channel(State, Req) ->
-    erlang:error(not_implemented).
+    {reply, {error, not_implemented, "Channel does not handle this command"}, State} .

@@ -28,7 +28,6 @@ handle(St, {join, Channel}) ->
         ok -> {reply, ok, St} ;
         user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
     end;
-    % {reply, {error, not_implemented, "join not implemented"}, St} ;
 
 % Leave channel
 handle(St, {leave, Channel}) ->
@@ -38,7 +37,6 @@ handle(St, {leave, Channel}) ->
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
     end;
-    % {reply, {error, not_implemented, "leave not implemented"}, St} ;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
@@ -46,10 +44,8 @@ handle(St, {message_send, Channel, Msg}) ->
     % {reply, ok, St} ;
     case genserver:request(list_to_atom(Channel), {message_send, Msg, St#client_st.nick}) of
         ok -> {reply, ok, St} ;
-        user_not_joined -> {reply, user_not_joined, St}
-    end,
-    {reply, ok, St} ;
-    % {reply, {error, not_implemented, "message sending not implemented"}, St} ;
+        user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
+    end;
 
 % ---------------------------------------------------------------------------
 % The cases below do not need to be changed...
