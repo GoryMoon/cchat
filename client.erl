@@ -3,15 +3,14 @@
 -export([handle/2, initial_state/3]).
 
 % Return an initial state record. This is called from GUI.
-% Do not change the signature of this function.
 initial_state(Nick, GUIAtom, ServerAtom) ->
     #client_st{
         gui = GUIAtom,
         nick = Nick,
-        server = getServer(ServerAtom),
-        channels = []
+        server = getServer(ServerAtom)
     }.
 
+% Gets the server of the inputed atom
 getServer(ServerAtom) ->
     case is_atom(ServerAtom) of
         true ->
