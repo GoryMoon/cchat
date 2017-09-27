@@ -88,7 +88,7 @@ handle_channel(State, {message_send, Msg, Client, Nick}) ->
     if
         Reply =:= true ->
             lists:foreach(fun(Elem) ->
-                genserver:request(Elem, {message_receive, State#channel_st.name, Nick, Msg}) end,
+                spawn(fun() -> genserver:request(Elem, {message_receive, State#channel_st.name, Nick, Msg}) end) end,
                 lists:delete(Client, State#channel_st.users)),
             {reply, ok, State};
         true -> {reply, user_not_joined, State}
