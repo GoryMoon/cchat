@@ -23,21 +23,21 @@ initial_state(Nick, GUIAtom, ServerAtom) ->
 
 % Join channel
 handle(St, {join, Channel}) ->
-    case genserver:request(St#client_st.server, {join, Channel, St#client_st.client}) of
+    case genserver:request(St#client_st.server, {join, Channel, self()}) of
         ok -> {reply, ok, St} ;
         user_already_joined -> {reply, {error, user_already_joined, "user_already_joined"}, St}
     end;
 
 % Leave channel
 handle(St, {leave, Channel}) ->
-    case genserver:request(list_to_atom(Channel), {leave, St#client_st.client}) of
+    case genserver:request(list_to_atom(Channel), {leave, self()}) of
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
     end;
 
 % Sending message (from GUI, to channel)
 handle(St, {message_send, Channel, Msg}) ->
-    case genserver:request(list_to_atom(Channel), {message_send, Msg, St#client_st.client, St#client_st.nick}) of
+    case genserver:request(list_to_atom(Channel), {message_send, Msg, self(), St#client_st.nick}) of
         ok -> {reply, ok, St} ;
         user_not_joined -> {reply, {error, user_not_joined, "user_not_joined"}, St}
     end;
